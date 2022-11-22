@@ -1,0 +1,7 @@
+{
+    "name": "Wordle",
+    "author": "Wapic",
+    "entry": "index.js",
+    "description": "Ingame Wordle",
+    "version": "1.0.0"
+}
