@@ -5,4 +5,5 @@ usage: /wordle
 
 # TODO
 sync word of the day with actual wordle
+
 handle reccuring letters
