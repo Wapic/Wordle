@@ -44,7 +44,7 @@ new Thread(function() {
                 return word.toUpperCase();
             });
 
-            wordOfTheDay = wordList[Math.round(Math.random() * wordList.length)].toUpperCase();
+            wordOfTheDay = wordList[Math.round(Math.random() * wordList.length)];
             console.log(wordOfTheDay);
         } catch (e) {
             print(e);
@@ -208,7 +208,7 @@ function setGameState(string){
             currentIndex = 0;
             usedLetters = "";
             correctLetters = "";
-            wordOfTheDay = wordList[Math.round(Math.random() * wordList.length)].toUpperCase();
+            wordOfTheDay = wordList[Math.round(Math.random() * wordList.length)];
             console.log(wordOfTheDay);
             gameState = "START";
             break;
