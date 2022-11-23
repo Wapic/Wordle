@@ -1,6 +1,6 @@
 //TODO: implement word of the day
-const RECT_WIDTH = 143;
-const RECT_HEIGHT = 171;
+const GAME_SIZE = 24;
+const SPACING = 2;
 const WIN_MESSAGE = "Congratulations, You Won!";
 const LOSE_MESSAGE = "You Lost, try again another time!";
 const PLAYING_MESSAGE = "Guess the 5 letter word!";
@@ -30,8 +30,6 @@ let rows = [
 ];
 let currentRow = 0;
 let currentIndex = 0;
-let gameOver = false;
-let currentGuess = "";
 let wordOfTheDay = "";
 let usedLetters = "";
 let correctLetters = "";
@@ -47,7 +45,7 @@ new Thread(function() {
                 WORD_LIST.push(word.toUpperCase());
             });
 
-            wordOfTheDay = WORD_LIST[Math.round(Math.random() * (WORD_LIST.length - 1) + 1)].toUpperCase();
+            wordOfTheDay = WORD_LIST[Math.round(Math.random() * WORD_LIST.length)].toUpperCase();
             console.log(wordOfTheDay);
         } catch (e) {
             print(e);
@@ -61,37 +59,32 @@ function onClick(mouseX, mouseY, buttonId) {
 }
 
 function onKeyType(char, keycode) {
-    if(gameOver) return;
+    if(gameState != "START") return;
 
     if(keycode == 28){ //ENTER
         if(currentIndex != 5) return;
 
-        if(!WORD_LIST.includes(rows[currentRow].join(""))) return; //check if word is valid
-        currentGuess = rows[currentRow].join("");
-
-        let sortedGuess = currentGuess.split(""); //copy current guess into variable
-        sortedGuess.sort(); //sort current guess
-        sortedGuess = sortedGuess.join("") //replace already used letters in sortedGuess and replace with nothing
-        usedLetters += sortedGuess.replaceAll(new RegExp(`[${usedLetters}]`, "gi"), ""); //add currentguess to used letters
+        let latestGuess = rows[currentRow].join("");
+        if(!WORD_LIST.includes(latestGuess)) return; //check if word is valid
+        usedLetters += latestGuess.replaceAll(new RegExp(`[${usedLetters}]`, "gi"), ""); //add used letters using regex to remove duplicates
 
         for(let i = 0;i < 5;i++){
-            if(currentGuess[i] == wordOfTheDay[i]){
-                correctLetters += currentGuess[i];
+            if(latestGuess[i] == wordOfTheDay[i]){
+                correctLetters += latestGuess[i]; //add all letters we have correctly guessed to a string
             }
         }
 
         currentRow++;
         currentIndex = 0;
 
-        if(currentGuess == wordOfTheDay){ //check if current guess is word of the day
+        if(latestGuess == wordOfTheDay){ //check if current guess is word of the day
             setGameState("WIN");
             return;
         }
-        if(currentRow > 5){ //if current row is 5 then and previous if statement returned false then we have lost
+        if(currentRow > 5){ //if current row is above 5 then and previous if statement returned false then we have lost
             setGameState("LOSE");
             return;
         }
-        currentGuess = "";
         return;
     }
 
@@ -114,32 +107,36 @@ function onKeyType(char, keycode) {
 function onUpdate(mouseX, mouseY, partialTicks) {
     const screenWidth = Renderer.screen.getWidth();
     const screenHeight = Renderer.screen.getHeight();
-    let renderX = screenWidth / 2 - (RECT_WIDTH / 2) - pos.x;
-    let renderY = screenHeight / 2 - (RECT_HEIGHT / 2) - pos.y;
-
+    const playWidth = (GAME_SIZE * 5) + (SPACING * 6);
+    const playHeight = (GAME_SIZE * 6) + (SPACING * 7);
+ 
+    let renderX = screenWidth / 2 - (playWidth / 2) - pos.x;
+    let renderY = screenHeight / 2 - (playHeight / 2) - pos.y;
+ 
     //Draw Background
-    Renderer.drawRect(Renderer.BLACK, renderX, renderY, RECT_WIDTH, RECT_HEIGHT);
-
+    Renderer.drawRect(Renderer.BLACK, renderX, renderY, playWidth, playHeight);
+   
     //Draw top message
-    Renderer.drawString(getMessage(), screenWidth / 2 - (Renderer.getStringWidth(getMessage()) / 2), 2);
+    Renderer.drawString(getMessage(), screenWidth / 2 - (Renderer.getStringWidth(getMessage()) / 2), renderY - (GAME_SIZE / 2));
 
     //Draw Letter Grid
-    renderX += 3;
-    renderY += 3;
-    for(let x=0;x < 6;x++){
-        for(let y=0;y < 5;y++){
-            let letter = rows[x][y];
-            drawLetterBox(letter, renderX + (y * 28), renderY + (x * 28), 25, 25, currentRow <= x ? Renderer.DARK_GRAY : getKeyColor(letter, y));
+    renderX += SPACING;
+    renderY += SPACING;
+    for(let y=0;y < 6;y++){
+        for(let x=0;x < 5;x++){
+            let letter = rows[y][x];
+            drawLetterBox(letter, renderX + (x * (GAME_SIZE + SPACING)), renderY + (y * (GAME_SIZE + SPACING)), GAME_SIZE, currentRow <= y ? Renderer.DARK_GRAY : getLetterColor(letter, x));
         }
     }
 
     //Draw keyboard
-    renderY += 172;
-    renderX += 5;
-    for(let c = 0; c < KEYBOARD.length;c++) {
-        for (let i = 0;i < KEYBOARD[c].length;i++) {
-            renderX = renderX + (c);
-            drawLetterBox(KEYBOARD[c][i], renderX + (i * 13), renderY + (c * 13), 10, 10, getKeyColor(KEYBOARD[c][i]));
+    renderY += playHeight;
+    renderX += GAME_SIZE / 2.5;
+    for(let y = 0; y < KEYBOARD.length;y++) {
+        renderX += y;
+        for (let x= 0;x < KEYBOARD[y].length;x++) {
+            let letter = KEYBOARD[y][x];
+            drawLetterBox(letter, renderX + (x * ((GAME_SIZE / 2.5) + SPACING)), renderY + (y * ((GAME_SIZE / 2.5) + SPACING)), GAME_SIZE / 2.5, getLetterColor(letter));
         }
     }
 }
@@ -148,35 +145,45 @@ function onUpdate(mouseX, mouseY, partialTicks) {
 * gets the color for the letter
 * @return {Long} Color based on the characters used ingame
 */
-function getKeyColor(key, index){
+function getLetterColor(letter, index){
+    let color = Renderer.GRAY;
 
-    let color = Renderer.DARK_GRAY;
-    if(isValidChar(key)){ 
-        if((typeof index !== "undefined" && key == wordOfTheDay[index]) || (typeof index === "undefined" && correctLetters.includes(key))){
-            return Renderer.DARK_GREEN;
-        } 
-        if(usedLetters.includes(key)){ 
-            color = Renderer.GRAY;
-            if(wordOfTheDay.includes(key)){ // TODO: Handle Recurring Letters
-                color = Renderer.GOLD; 
-            }
-        } 
+    if(typeof index !== "undefined"){ //Index is defined so we're getting colors for the grid
+        //TODO: Handle gold letters properly
+        if(wordOfTheDay.includes(letter)){ 
+            color = Renderer.GOLD;
+        }
+        if(letter == wordOfTheDay[index]){
+            color = Renderer.DARK_GREEN;
+        }
+        return color;
     }
-    return color;
+
+    if(wordOfTheDay.includes(letter)){
+        color = Renderer.GOLD;
+    }
+    if(correctLetters.includes(letter)){
+        color = Renderer.DARK_GREEN;
+    }
+
+    return isValidChar(letter) && usedLetters.includes(letter) ? color : Renderer.DARK_GRAY;
 }
 
 /**
-* Draws a box with a centered string
+* Draw a box with a centered string
 * @param {String} letter String to be displayed
-* @param {Integer} x The X position of the object
-* @param {Integer} y The Y position of the object
-* @param {Integer} width The width of the object
-* @param {Integer} height The height of the object
-* @param {Long} color The background color of the box
+* @param {Integer} x The X position of the box
+* @param {Integer} y The Y position of the box
+* @param {Integer} size the width and height of the box
+* @param {Long} color the color of the box
 */
-function drawLetterBox(letter, x, y, width, height, color){
-    Renderer.drawRect(color, x, y, width, height);
-    Renderer.drawString(letter, x + (width / 2) - (Renderer.getStringWidth(letter) / 2), y + (height / 2) - 3.5, false);
+function drawLetterBox(letter, x, y, size, color){
+    Renderer.drawRect(color, x, y, size, size);
+    const text = new Text(letter);
+    text.setScale(size / 12);
+    text.setX(x + (size / 4));
+    text.setY(y + (size / 4));
+    text.draw();
 }
 
 /**
@@ -188,7 +195,6 @@ function setGameState(string){
         case "WIN":
         case "LOSE":
             gameState = string;
-            gameOver = true;
             break;
         default:
             rows = [
@@ -201,11 +207,9 @@ function setGameState(string){
             ]; 
             currentRow = 0;
             currentIndex = 0;
-            currentGuess = "";
             usedLetters = "";
             correctLetters = "";
-            gameOver = false;
-            wordOfTheDay = WORD_LIST[Math.round(Math.random() * (WORD_LIST.length - 1) + 1)].toUpperCase();
+            wordOfTheDay = WORD_LIST[Math.round(Math.random() * WORD_LIST.length)].toUpperCase();
             console.log(wordOfTheDay);
             gameState = "START";
             break;
