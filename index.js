@@ -4,7 +4,6 @@ const SPACING = 2;
 const WIN_MESSAGE = "Congratulations, You Won!";
 const LOSE_MESSAGE = "You Lost, try again another time!";
 const PLAYING_MESSAGE = "Guess the 5 letter word!";
-const WORD_LIST = [];
 const KEYBOARD = ["QWERTYUIOP",
                   "ASDFGHJKL",
                   "ZXCVBNM"];
@@ -28,6 +27,7 @@ let rows = [
     ["","","","",""],
     ["","","","",""]
 ];
+let wordList = [];
 let currentRow = 0;
 let currentIndex = 0;
 let wordOfTheDay = "";
@@ -39,13 +39,12 @@ let gameState = "START";
 new Thread(function() {
         try {
             const words = FileLib.read("Wordle", "words.txt");
-            const wordsArray = words.split("\n");
-
-            wordsArray.forEach(word => {
-                WORD_LIST.push(word.toUpperCase());
+            wordList = words.split("\n");
+            wordList = wordList.map((word) => {
+                return word.toUpperCase();
             });
 
-            wordOfTheDay = WORD_LIST[Math.round(Math.random() * WORD_LIST.length)].toUpperCase();
+            wordOfTheDay = wordList[Math.round(Math.random() * wordList.length)].toUpperCase();
             console.log(wordOfTheDay);
         } catch (e) {
             print(e);
@@ -65,7 +64,7 @@ function onKeyType(char, keycode) {
         if(currentIndex != 5) return;
 
         let latestGuess = rows[currentRow].join("");
-        if(!WORD_LIST.includes(latestGuess)) return; //check if word is valid
+        if(!wordList.includes(latestGuess)) return; //check if word is valid
         usedLetters += latestGuess.replaceAll(new RegExp(`[${usedLetters}]`, "gi"), ""); //add used letters using regex to remove duplicates
 
         for(let i = 0;i < 5;i++){
@@ -209,7 +208,7 @@ function setGameState(string){
             currentIndex = 0;
             usedLetters = "";
             correctLetters = "";
-            wordOfTheDay = WORD_LIST[Math.round(Math.random() * WORD_LIST.length)].toUpperCase();
+            wordOfTheDay = wordList[Math.round(Math.random() * wordList.length)].toUpperCase();
             console.log(wordOfTheDay);
             gameState = "START";
             break;
