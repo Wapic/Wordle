@@ -47,12 +47,11 @@ new Thread(function() {
                 WORD_LIST.push(word.toUpperCase());
             });
 
-            let randomNumber = Math.round(Math.random() * (wordsArray.length - 1) + 1);
-            wordOfTheDay = wordsArray[randomNumber].toUpperCase();
+            wordOfTheDay = WORD_LIST[Math.round(Math.random() * (WORD_LIST.length - 1) + 1)].toUpperCase();
             console.log(wordOfTheDay);
         } catch (e) {
             print(e);
-            ChatLib.chat("&e[Wordle]&f: An error occured loading word list");
+            ChatLib.chat("&e[Wordle]&f: An error occured while loading word list");
         }
     }
 ).start();
@@ -147,25 +146,34 @@ function onUpdate(mouseX, mouseY, partialTicks) {
 
 /*
 * gets the color for the letter
+* @return {Long} Color based on the characters used ingame
 */
 function getKeyColor(key, index){
 
     let color = Renderer.DARK_GRAY;
     if(isValidChar(key)){ 
+        if((typeof index !== "undefined" && key == wordOfTheDay[index]) || (typeof index === "undefined" && correctLetters.includes(key))){
+            return Renderer.DARK_GREEN;
+        } 
         if(usedLetters.includes(key)){ 
             color = Renderer.GRAY;
-            if(wordOfTheDay.includes(key)){
-                color = Renderer.GOLD;  
+            if(wordOfTheDay.includes(key)){ // TODO: Handle Recurring Letters
+                color = Renderer.GOLD; 
             }
-            if((typeof index !== "undefined" && key == wordOfTheDay[index]) || 
-               (correctLetters.includes(key) && typeof index === "undefined")){
-                return Renderer.GREEN;
-            }
-        }
+        } 
     }
     return color;
 }
 
+/**
+* Draws a box with a centered string
+* @param {String} letter String to be displayed
+* @param {Integer} x The X position of the object
+* @param {Integer} y The Y position of the object
+* @param {Integer} width The width of the object
+* @param {Integer} height The height of the object
+* @param {Long} color The background color of the box
+*/
 function drawLetterBox(letter, x, y, width, height, color){
     Renderer.drawRect(color, x, y, width, height);
     Renderer.drawString(letter, x + (width / 2) - (Renderer.getStringWidth(letter) / 2), y + (height / 2) - 3.5, false);
@@ -173,6 +181,7 @@ function drawLetterBox(letter, x, y, width, height, color){
 
 /**
 * set the current game state
+* @param {String} string (WIN, LOSE, START)
 */
 function setGameState(string){
     switch (string) {
@@ -196,6 +205,8 @@ function setGameState(string){
             usedLetters = "";
             correctLetters = "";
             gameOver = false;
+            wordOfTheDay = WORD_LIST[Math.round(Math.random() * (WORD_LIST.length - 1) + 1)].toUpperCase();
+            console.log(wordOfTheDay);
             gameState = "START";
             break;
     }
@@ -203,6 +214,7 @@ function setGameState(string){
 
 /**
 * Get the message to be displayed at the top of the screen
+* @return {String} String based on gameState
 */
 function getMessage(){
     return gameState == "WIN" ? WIN_MESSAGE : gameState == "LOSE" ? LOSE_MESSAGE : PLAYING_MESSAGE;
@@ -210,6 +222,7 @@ function getMessage(){
 
 /**
 * Check if char is a valid letter
+* @return {Boolean} true if char is a valid english letter
 */
 function isValidChar(char){
     return (/[A-z]/).test(char);
